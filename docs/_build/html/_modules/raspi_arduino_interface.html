@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>raspi_arduino_interface &mdash; ImageProcessing 1.0.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ImageProcessing
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">main</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ImageProcessing</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">raspi_arduino_interface</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for raspi_arduino_interface</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">serial</span>
+<span class="kn">import</span> <span class="nn">time</span>
+<span class="kn">from</span> <span class="nn">util</span> <span class="kn">import</span> <span class="n">TERMINAL_TEXT_COLOR</span> <span class="k">as</span> <span class="n">ttc</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
+
+
+<div class="viewcode-block" id="RobotParamaters"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.RobotParamaters">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">RobotParamaters</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Struct-like dataclass that stores various parameters that manipulate the behavior of the robot</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mode</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">is_disc_moving</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">rotating_disc_PWM</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span>
+    <span class="n">min_PWM</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">max_PWM</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">255</span></div>
+
+
+<div class="viewcode-block" id="Signal"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.Signal">[docs]</a><span class="k">class</span> <span class="nc">Signal</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class that defines signals, which provides meaning to integer value for further processing</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">NO_TRACKING_SIGNAL</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">TERMINATION_SIGNAL</span> <span class="o">=</span> <span class="mi">5</span></div>
+
+
+<div class="viewcode-block" id="ArduinoSerialSender"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.ArduinoSerialSender">[docs]</a><span class="k">class</span> <span class="nc">ArduinoSerialSender</span><span class="p">:</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">testing_phase</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">is_testing_phase</span> <span class="o">=</span> <span class="n">testing_phase</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_testing_phase</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">ttc</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Connecting /dev/ttyACM0 ...&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">Serial</span><span class="p">(</span>
+                        <span class="s1">&#39;/dev/ttyACM0&#39;</span><span class="p">,</span> <span class="mi">115200</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="n">ttc</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Failure to connect /dev/ttyACM0&quot;</span><span class="p">)</span>
+                    <span class="n">ttc</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Connecting /dev/ttyACM1 ...&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">ser</span> <span class="o">=</span> <span class="n">serial</span><span class="o">.</span><span class="n">Serial</span><span class="p">(</span>
+                        <span class="s1">&#39;/dev/ttyACM1&#39;</span><span class="p">,</span> <span class="mi">115200</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="n">ttc</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Connection Failed&quot;</span><span class="p">,</span> <span class="n">highlight</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">is_testing_phase</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">ttc</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Succesfully connected&quot;</span><span class="p">)</span>
+                <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">reset_input_buffer</span><span class="p">()</span>
+
+<div class="viewcode-block" id="ArduinoSerialSender.send_to_arduino"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.ArduinoSerialSender.send_to_arduino">[docs]</a>    <span class="k">def</span> <span class="nf">send_to_arduino</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="n">message</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ser</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">message</span><span class="o">.</span><span class="n">encode</span><span class="p">(</span><span class="s1">&#39;utf-8&#39;</span><span class="p">)</span>
+                       <span class="p">)</span> <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">is_testing_phase</span> <span class="k">else</span> <span class="kc">None</span></div></div>
+
+
+<div class="viewcode-block" id="CommandProcessor"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.CommandProcessor">[docs]</a><span class="k">class</span> <span class="nc">CommandProcessor</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class that process pressed key from rasberry pi and send to arduino</span>
+
+<span class="sd">    ### Attributes:</span>
+<span class="sd">        sender (ArduinoSerialSender): Used to send message to arduino throgh serial communication</span>
+<span class="sd">        key_action_table (dictionary): Used to store pressed key and the function operation pair. When a key is pressed, the respective function will be called.</span>
+
+
+<span class="sd">    ### Important notes:</span>
+<span class="sd">        The functions stored in key_action_table should only receive one parameters, which is object of RobotParamaters</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sender</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a new instance for the Command Processor class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span> <span class="o">=</span> <span class="n">sender</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">NUMPAD_1</span> <span class="o">=</span> <span class="mi">49</span>
+        <span class="n">NUMPAD_2</span> <span class="o">=</span> <span class="mi">50</span>
+        <span class="n">NUMPAD_3</span> <span class="o">=</span> <span class="mi">51</span>
+        <span class="n">NUMPAD_5</span> <span class="o">=</span> <span class="mi">53</span>
+        <span class="n">ESC_KEY</span> <span class="o">=</span> <span class="mi">27</span>
+
+        <span class="c1"># Termination</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="n">ESC_KEY</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="n">Signal</span><span class="o">.</span><span class="n">TERMINATION_SIGNAL</span>
+
+        <span class="c1"># Up and down</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;up&quot;</span><span class="p">,</span> <span class="s2">&quot;W&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;down&quot;</span><span class="p">,</span> <span class="s2">&quot;S&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Rotation move</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;left&quot;</span><span class="p">,</span> <span class="s2">&quot;A&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;right&quot;</span><span class="p">,</span> <span class="s2">&quot;D&quot;</span><span class="p">)</span>
+
+       <span class="c1"># Translation move</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="n">NUMPAD_1</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;move left&quot;</span><span class="p">,</span> <span class="s2">&quot;MOVE_LEFT&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="n">NUMPAD_2</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;move down&quot;</span><span class="p">,</span> <span class="s2">&quot;MOVE_BACK&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="n">NUMPAD_3</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;move right&quot;</span><span class="p">,</span> <span class="s2">&quot;MOVE_RIGHT&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="n">NUMPAD_5</span><span class="p">]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;move front&quot;</span><span class="p">,</span> <span class="s2">&quot;MOVE_FRONT&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Reload and Shoot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;r&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;reload&quot;</span><span class="p">,</span> <span class="s2">&quot;RELOAD&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">robot_param</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">simple_send</span><span class="p">(</span>
+            <span class="n">robot_param</span><span class="p">,</span> <span class="s2">&quot;shoot&quot;</span><span class="p">,</span> <span class="s2">&quot;SHOOT&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Reload and Shoot</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;i&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__add_rotating_disc_PWM_send</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__minus_rotating_disc_PWM_send</span>
+
+        <span class="c1"># Activate and Deactivate disc</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;z&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__activate_disc_send</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;x&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__deactivate_disc_send</span>
+
+        <span class="c1"># Stop tracking</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;q&#39;</span><span class="p">)]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__stop_tracking</span>
+
+<div class="viewcode-block" id="CommandProcessor.process"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.CommandProcessor.process">[docs]</a>    <span class="k">def</span> <span class="nf">process</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pressed_key</span><span class="p">,</span> <span class="n">robot_param</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method process the pressed_key and perform the action based on pressed_key</span>
+
+<span class="sd">        For specific function please refers to key_action_table</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            pressed_key     (int): The input from rasberrypi ( commonly by keyboard )</span>
+<span class="sd">            robot_param     (string) : The robot which this parameters will be passed in to the argument of the respective action function</span>
+
+<span class="sd">        ### Returns: </span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># if pressed_key not found, return False</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pressed_key</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">key_action_table</span><span class="p">[</span><span class="n">pressed_key</span><span class="p">](</span><span class="n">robot_param</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ttc</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+                <span class="s2">&quot;Key not defined in key action table, thus no operation performed&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="CommandProcessor.send_to_arduino"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.CommandProcessor.send_to_arduino">[docs]</a>    <span class="k">def</span> <span class="nf">send_to_arduino</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">message</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_to_arduino</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="CommandProcessor.simple_send"><a class="viewcode-back" href="../raspi_arduino_interface.html#raspi_arduino_interface.CommandProcessor.simple_send">[docs]</a>    <span class="k">def</span> <span class="nf">simple_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">robot_param</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method only perform changing the mode of the robot parameters, and send message to arduino only</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            robot_param (RobotParamaters): Used to change the mode</span>
+<span class="sd">            mode                (string) : It is used to assign to the robot_param.mode value</span>
+<span class="sd">            message             (string) : This exact message will be sent to arduino using serial communication</span>
+
+<span class="sd">        ### Returns:</span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="n">mode</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_to_arduino</span><span class="p">(</span><span class="n">message</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__add_rotating_disc_PWM_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">robot_param</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method add the value of the rotating disc PWM of the robot, and send the message to arduino</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            robot_param (RobotParamaters): Used to modify the PWM value and mode</span>
+
+<span class="sd">        ### Returns: </span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">robot_param</span><span class="o">.</span><span class="n">rotating_disc_PWM</span> <span class="o">+</span> <span class="mi">5</span> <span class="o">&gt;</span> <span class="n">robot_param</span><span class="o">.</span><span class="n">max_PWM</span><span class="p">:</span>
+            <span class="n">robot_param</span><span class="o">.</span><span class="n">rotating_disc_PWM</span> <span class="o">+=</span> <span class="mi">5</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ttc</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;PWM value has reached its maximum value&quot;</span><span class="p">)</span>
+
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s2">&quot;add Disc PWM&quot;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">robot_param</span><span class="o">.</span><span class="n">is_disc_moving</span> <span class="o">==</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;START_DISC,&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">robot_param</span><span class="o">.</span><span class="n">rotating_disc_PWM</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_to_arduino</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__minus_rotating_disc_PWM_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">robot_param</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method minus the value of the rotating disc PWM of the robot, and send the message to arduino</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            robot_param (RobotParamaters): Used to modify the PWM value and mode</span>
+
+<span class="sd">        ### Returns: </span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">robot_param</span><span class="o">.</span><span class="n">rotating_disc_PWM</span> <span class="o">-</span> <span class="mi">5</span> <span class="o">&lt;</span> <span class="n">robot_param</span><span class="o">.</span><span class="n">min_PWM</span><span class="p">:</span>
+            <span class="n">robot_param</span><span class="o">.</span><span class="n">rotating_disc_PWM</span> <span class="o">-=</span> <span class="mi">5</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">ttc</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;PWM value has reached its minimum value&quot;</span><span class="p">)</span>
+
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s2">&quot;minus Disc PWM&quot;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">robot_param</span><span class="o">.</span><span class="n">is_disc_moving</span> <span class="o">==</span> <span class="kc">True</span><span class="p">):</span>
+            <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;START_DISC,&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">robot_param</span><span class="o">.</span><span class="n">rotating_disc_PWM</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_to_arduino</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__activate_disc_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">robot_param</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method set the mode to activate (making the disc runs), and send the message to arduino</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            robot_param (RobotParamaters): Used to modify the is_disc_moving parameter value and mode</span>
+
+<span class="sd">        ### Returns: </span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s2">&quot;Activate Disc&quot;</span>
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">is_disc_moving</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;START_DISC,&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">robot_param</span><span class="o">.</span><span class="n">rotating_disc_PWM</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_to_arduino</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__deactivate_disc_send</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">robot_param</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method set the mode to deactivate (making the disc stops), and send the message to arduino</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            robot_param (RobotParamaters): Used to modify the is_disc_moving parameter value and mode</span>
+
+<span class="sd">        ### Returns: </span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s2">&quot;Deactivate Disc&quot;</span>
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">is_disc_moving</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;STOP_DISC&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_to_arduino</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">__stop_tracking</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">robot_param</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method set the mode to stop tracking, and send the message to arduino to let the robot stop moving</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            robot_param (RobotParamaters): Used to modify the is_disc_moving parameter value and mode</span>
+
+<span class="sd">        ### Returns: </span>
+<span class="sd">            Signal.NO_TRACKING_SIGNAL ( equivalent to integer 1 )</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">robot_param</span><span class="o">.</span><span class="n">mode</span> <span class="o">=</span> <span class="s2">&quot;stop tracking&quot;</span>
+        <span class="n">message</span> <span class="o">=</span> <span class="s2">&quot;STOP&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sender</span><span class="o">.</span><span class="n">send_to_arduino</span><span class="p">(</span><span class="n">message</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Signal</span><span class="o">.</span><span class="n">NO_TRACKING_SIGNAL</span></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, ivan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

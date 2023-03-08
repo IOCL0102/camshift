@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>camshift_tracker &mdash; ImageProcessing 1.0.0 documentation</title>
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ImageProcessing
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">main</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ImageProcessing</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Module code</a></li>
+      <li class="breadcrumb-item active">camshift_tracker</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for camshift_tracker</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">cv2</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+
+<div class="viewcode-block" id="CamShiftTracker"><a class="viewcode-back" href="../camshift_tracker.html#camshift_tracker.CamShiftTracker">[docs]</a><span class="k">class</span> <span class="nc">CamShiftTracker</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    A class that used to perform camshift tracking algorithm</span>
+
+<span class="sd">    ### Attributes:</span>
+<span class="sd">        bbox   (tuple): Bounding box,  which is the target that the camshift tracker tracks. Format as following, (x0, y0, box_width, box_height)</span>
+
+<span class="sd">        roi_hist      : Calculation result by the cv2.calcHist() function</span>
+
+<span class="sd">        term_crit     : A parameters that used for cv2.calcHist()</span>
+
+<span class="sd">        color_mode    : Color convertion index based on cv2, example -&gt; cv2.BGR2HSV , cv2.BGR2RGBV, etc.</span>
+
+<span class="sd">        bin_size  (int): size of the intensity level for histogram calculation. Higher bin_size, more pay attention to detail of the image    </span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">bin_size</span><span class="o">=</span><span class="mi">16</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Init function of the CamShiftTracker class</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bbox</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_hist</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">term_crit</span> <span class="o">=</span> <span class="p">(</span><span class="n">cv2</span><span class="o">.</span><span class="n">TERM_CRITERIA_EPS</span> <span class="o">|</span>
+                          <span class="n">cv2</span><span class="o">.</span><span class="n">TERM_CRITERIA_COUNT</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bin_size</span> <span class="o">=</span> <span class="n">bin_size</span>
+
+<div class="viewcode-block" id="CamShiftTracker.set_color_mode"><a class="viewcode-back" href="../camshift_tracker.html#camshift_tracker.CamShiftTracker.set_color_mode">[docs]</a>    <span class="k">def</span> <span class="nf">set_color_mode</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">color_mode</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method sets the color_mode</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            color_mode : Example-&gt; cv2.BGR2HSV , cv2.BGR2RGBV, etc.</span>
+
+<span class="sd">        ### Returns:</span>
+<span class="sd">            None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span> <span class="o">=</span> <span class="n">color_mode</span></div>
+
+<div class="viewcode-block" id="CamShiftTracker.update"><a class="viewcode-back" href="../camshift_tracker.html#camshift_tracker.CamShiftTracker.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">roi_position</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This methods updates the parameters that will be used for tracking in the track method</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            frame                 (array): Frame that captures by the video stream</span>
+<span class="sd">            mask                  (array): Mask that filtered by cv2.inRange() function</span>
+<span class="sd">            roi_position (tuple in tuple): Consist of the starting and ending position of the bounding box ( region of interest ), format as following </span>
+<span class="sd">            ((x1,y1), (x2,y2))</span>
+
+<span class="sd">        ### Returns:</span>
+<span class="sd">            bool: Returns true if sucessfully updated the parameters else return false</span>
+
+<span class="sd">        ### Notes:</span>
+<span class="sd">            Note that the first index of opencv frame array is y not x</span>
+<span class="sd">            format please refers as following as example</span>
+
+<span class="sd">            frame[y,x,channel]</span>
+<span class="sd">            channel   0,1,2   B,G,R CHANNEL</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># Input validation</span>
+        <span class="k">if</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="kc">None</span> \
+                <span class="ow">or</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> \
+                <span class="ow">or</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="c1"># Find box width and box height</span>
+        <span class="n">box_width</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">roi_position</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">box_height</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">roi_position</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># Set the smallest x-axis value as starting point</span>
+        <span class="n">x0</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">roi_position</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">y0</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">roi_position</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">],</span> <span class="n">roi_position</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">1</span><span class="p">])</span>
+
+        <span class="c1"># Define bounding box</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">bbox</span> <span class="o">=</span> <span class="p">(</span><span class="n">x0</span><span class="p">,</span> <span class="n">y0</span><span class="p">,</span> <span class="n">box_width</span><span class="p">,</span> <span class="n">box_height</span><span class="p">)</span>
+
+        <span class="c1"># Set Region of Interest</span>
+        <span class="n">frame_roi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">frame</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span> <span class="n">y0</span> <span class="o">+</span> <span class="n">box_height</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">box_width</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">frame_roi</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span><span class="n">frame_roi</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span><span class="p">)</span>
+
+        <span class="n">mask_roi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">mask</span><span class="p">[</span><span class="n">y0</span><span class="p">:</span> <span class="n">y0</span> <span class="o">+</span> <span class="n">box_height</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">box_width</span><span class="p">])</span>
+
+        <span class="c1"># Calculate historgram</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_hist</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">calcHist</span><span class="p">([</span><span class="n">frame_roi</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mask_roi</span><span class="p">,</span> <span class="p">[</span>
+                                     <span class="bp">self</span><span class="o">.</span><span class="n">bin_size</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">180</span><span class="p">])</span>
+
+        <span class="c1"># Normalize y-axis (number of pixel)</span>
+        <span class="c1"># -&gt; different picture might have different size (pixels)</span>
+        <span class="n">cv2</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">roi_hist</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_hist</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="n">cv2</span><span class="o">.</span><span class="n">NORM_MINMAX</span><span class="p">)</span>
+
+        <span class="c1"># Flatten to a 1d-numpy array</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">roi_hist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_hist</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="CamShiftTracker.track"><a class="viewcode-back" href="../camshift_tracker.html#camshift_tracker.CamShiftTracker.track">[docs]</a>    <span class="k">def</span> <span class="nf">track</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frame</span><span class="p">,</span> <span class="n">mask</span><span class="p">,</span> <span class="n">is_draw</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        This method use the arguments that calculated by the update method and perform the camshift tracking algorithm</span>
+
+<span class="sd">        ### Args:</span>
+<span class="sd">            frame   (array): Frame that captures by the video stream</span>
+
+<span class="sd">            mask    (array): Current mask that filtered by cv2.inRange() for current frame</span>
+
+<span class="sd">            is_draw  (bool): When set to true, it draws the bounding box to the frame</span>
+
+<span class="sd">            verbose  (bool): When set to true, it prints the center point of the tracking object (output of the camshift algorithm)</span>
+
+<span class="sd">        ### Returns:</span>
+<span class="sd">            track_box: (center_x, center_y), (width, height), angle</span>
+
+<span class="sd">        ### Notes:</span>
+<span class="sd">            bbox format</span>
+<span class="sd">            (center_x, center_y, width, height)</span>
+
+<span class="sd">            track_box format</span>
+<span class="sd">            (center_x, center_y), (width, height), angle</span>
+
+<span class="sd">            (center_x, center_y): The (x, y) coordinates of the center of the rectangle.</span>
+<span class="sd">            (width, height): The width and height of the rectangle.</span>
+<span class="sd">            angle: The angle of rotation of the minimum area rectangle in degrees.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Apply meanshift algorithm to track the object</span>
+
+        <span class="n">ref</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">cvtColor</span><span class="p">(</span>
+            <span class="n">frame</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span><span class="p">)</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">color_mode</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">frame</span>
+
+        <span class="c1"># return a gray scale image where each pixel represent the likelyhood probability comparing the roi_hist</span>
+        <span class="n">prob</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">calcBackProject</span><span class="p">([</span><span class="n">ref</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">roi_hist</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">180</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="c1"># it is used to ignore the rest pixel value except the mask roi</span>
+        <span class="n">prob</span> <span class="o">&amp;=</span> <span class="n">mask</span>
+
+        <span class="n">track_box</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bbox</span> <span class="o">=</span> <span class="n">cv2</span><span class="o">.</span><span class="n">CamShift</span><span class="p">(</span><span class="n">prob</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">bbox</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">term_crit</span><span class="p">)</span>
+
+        <span class="n">target_mid_point</span> <span class="o">=</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">track_box</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]),</span> <span class="nb">round</span><span class="p">(</span><span class="n">track_box</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">1</span><span class="p">]))</span>
+
+        <span class="k">if</span> <span class="n">is_draw</span><span class="p">:</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">circle</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">target_mid_point</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">cv2</span><span class="o">.</span><span class="n">ellipse</span><span class="p">(</span><span class="n">frame</span><span class="p">,</span> <span class="n">track_box</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">255</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">verbose</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">target_mid_point</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">track_box</span></div></div>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2023, ivan.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
