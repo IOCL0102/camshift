@@ -28,6 +28,16 @@ def normalize(target, min, max):
     return (target-min)/(max-min)
 
 
+def convert_to_angle(track_box, convertion_func):
+    target_mid_point = (round(track_box[0][0]), round(track_box[0][1]))
+    converted_mid_point = convertion_func(target_mid_point)
+
+    angle_x = int(round(converted_mid_point[0]))
+    angle_y = int(round(converted_mid_point[1]))
+
+    return angle_x, angle_y
+
+
 def insert_info_to_frame(frame, robot_param, text_color=COLOR.RED_BGR):
     cv2.putText(frame, "Mode: " + robot_param.mode, (20, 40),
                 cv2.FONT_HERSHEY_PLAIN, 1.2, text_color.value)

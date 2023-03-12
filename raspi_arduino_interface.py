@@ -25,7 +25,29 @@ class Signal:
 
 
 class ArduinoSerialSender:
+    """
+    Class that sends message to arduino through serial communication
+
+    ### Attributes:
+        is_testing_phase (bool): When it is true, it does not establish connection to dev/ttyACMx and thus does not send message to arduino.      
+
+    ==================================================
+    ### Overall sending procedure:
+    ==================================================
+    #### Rasberrypi side:
+    ArduinoSerialSender    
+    ---establish connection---> rasberrypi serial port
+    ---connection established---> call send_to_arduino() method
+
+    #### Arduino side
+    ---message sent---> arduino receive the encoded message
+    ---message decode---> receive the exact message
+    """
+
     def __init__(self, testing_phase=False):
+        """
+        Init function which it tries to establish connection with the serial port of rasberrypi
+        """
         self.is_testing_phase = testing_phase
 
         if not self.is_testing_phase:
@@ -48,6 +70,12 @@ class ArduinoSerialSender:
                 self.ser.reset_input_buffer()
 
     def send_to_arduino(self, message):
+        """
+        This method send the message to arduino through serial communication
+
+        ### Args:
+            message (str): The message that sends to arduino
+        """
         message += "\n"
         self.ser.write(message.encode('utf-8')
                        ) if not self.is_testing_phase else None

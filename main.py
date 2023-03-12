@@ -20,23 +20,29 @@ def main():
     cap = cv2.VideoCapture(0)
     cap_width, cap_height = util.set_cap_width_height(cap, 640, 480)
 
+    color_param = COLOR_SELECTOR_PARAMS()
+    color_param.set_coordinate_normalization(True, 120)
+    color_param.set_shift_left_param(True, 0.5, 0.5)
+
+    roi_param = ROI_SELECTOR_PARAMS()
+
     cv2.namedWindow("main")
-    cv2.setMouseCallback("main", color_selector, COLOR_SELECTOR_PARAMS)
+    cv2.setMouseCallback("main", color_selector, color_param)
     cv2.namedWindow("mask")
-    cv2.setMouseCallback("mask", roi_selector, ROI_SELECTOR_PARAMS)
+    cv2.setMouseCallback("mask", roi_selector, roi_param)
 
     mask = np.ones((cap_height, cap_width, 3), np.uint8)
 
     tracker = CamShiftTracker()
+    tracker.set_color_mode(cv2.COLOR_BGR2HSV)
+
     keyboard_processor = CommandProcessor(
         ArduinoSerialSender(testing_phase=False))
+
+    # I just simply name it
     virtual_robot_A = RobotParamaters()
-
-    tracker.set_color_mode(cv2.COLOR_BGR2HSV)
-    COLOR_SELECTOR_PARAMS.set_coordinate_normalization(True, 120)
-    COLOR_SELECTOR_PARAMS.set_shift_left_param(True, 0.5, 0.5)
-
     is_success_update = False
+
     while True:
         util.FPS.counter_on()
         is_read, frame = cap.read()
@@ -45,36 +51,33 @@ def main():
             break
 
         # Updates the frames inside these params
-        COLOR_SELECTOR_PARAMS.attach_frame(frame)
-        ROI_SELECTOR_PARAMS.attach_frame(mask)
+        color_param.attach_frame(frame)
+        roi_param.attach_frame(mask)
 
         #############################################################################
         # MAIN TRACKING OPERATION
         #############################################################################
 
-        lower_bound = np.array(COLOR_SELECTOR_PARAMS.filter_lower_bound)
-        upper_bound = np.array(COLOR_SELECTOR_PARAMS.filter_upper_bound)
+        lower_bound = np.array(color_param.filter_lower_bound)
+        upper_bound = np.array(color_param.filter_upper_bound)
 
         mask = cv2.inRange(frame, lower_bound, upper_bound)
 
         # is_updated_required : make sure it only updates value once
         # after LBUTTONUP is clicked
-        if ROI_SELECTOR_PARAMS.is_update_required:
+        if roi_param.is_update_required:
             is_success_update = tracker.update(frame, mask,
                                                roi_position=(
-                                                   ROI_SELECTOR_PARAMS.box_start_position, ROI_SELECTOR_PARAMS.box_end_position))
-            ROI_SELECTOR_PARAMS.is_update_required = False
+                                                   roi_param.box_start_position, roi_param.box_end_position))
+            roi_param.is_update_required = False
 
         # is_tracking : make sure it runs after LBUTTONUP is clicked
         # is_success_update : make sure it runs after tracker.update function has successfully run
-        if ROI_SELECTOR_PARAMS.is_tracking and is_success_update:
+        if roi_param.is_tracking and is_success_update:
             track_box = tracker.track(frame, mask, is_draw=True, verbose=False)
-            target_mid_point = (round(track_box[0][0]), round(track_box[0][1]))
-            converted_mid_point = COLOR_SELECTOR_PARAMS.coordinate_conversion(
-                target_mid_point)
 
-            angle_x = int(round(converted_mid_point[0]))
-            angle_y = int(round(converted_mid_point[1]))
+            angle_x, angle_y = util.convert_to_angle(track_box,
+                                                     convertion_func=color_param.coordinate_conversion)
 
             message = "MOVE," + str(angle_x) + "," + str(angle_y)
             ttc.info(message, highlight=True)
@@ -92,18 +95,18 @@ def main():
             if signal == Signal.TERMINATION_SIGNAL:
                 break
             elif signal == Signal.NO_TRACKING_SIGNAL:
-                ROI_SELECTOR_PARAMS.is_tracking = False
+                roi_param.is_tracking = False
 
         ###########################################################
         # SET FRAME AND MASK ATTRIBUTES
         ###########################################################
 
         BGR_mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-        ROI_SELECTOR_PARAMS.show_ROI_box(BGR_mask)
-        ROI_SELECTOR_PARAMS.show_coordinate(BGR_mask)
+        roi_param.show_ROI_box(BGR_mask)
+        roi_param.show_coordinate(BGR_mask)
 
-        COLOR_SELECTOR_PARAMS.show_center_point()
-        COLOR_SELECTOR_PARAMS.show_coordinate()
+        color_param.show_center_point()
+        color_param.show_coordinate()
 
         util.FPS.show_FPS(frame)
         util.insert_info_to_frame(frame, virtual_robot_A)
